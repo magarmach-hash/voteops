@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dev Voting App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.4rem;
+    }
+    .subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+    }
+    .question {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 1.2rem;
+    }
+    .options { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+    .option-btn {
+      background: #334155;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 0.85rem 1.2rem;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+    .option-btn:hover { border-color: #6366f1; background: #3b4f6b; }
+    .option-btn.selected { border-color: #6366f1; background: #312e81; color: #a5b4fc; }
+    .submit-btn {
+      width: 100%;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .submit-btn:hover { background: #4f46e5; }
+    .submit-btn:disabled { background: #475569; cursor: not-allowed; }
+    .toast {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+    .toast.success { display: block; background: #14532d; color: #86efac; }
+    .toast.error   { display: block; background: #7f1d1d; color: #fca5a5; }
+    .divider { border: none; border-top: 1px solid #334155; margin: 1.8rem 0; }
+    .results-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .results-title span { font-size: 0.78rem; color: #64748b; }
+    .bar-wrap { margin-bottom: 0.9rem; }
+    .bar-label { font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.25rem; display: flex; justify-content: space-between; }
+    .bar-bg { background: #334155; border-radius: 99px; height: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 99px; background: #6366f1; transition: width 0.4s ease; }
+    .refresh-btn {
+      background: none;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .refresh-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🗳️ Dev Voting App</h1>
+  <p class="subtitle">Cast your vote below</p>
+
+  <p class="question">What do we do about this bug?</p>
+
+  <div class="options" id="options">
+    {% for option in options %}
+    <button class="option-btn" onclick="selectOption(this, '{{ option }}')">{{ option }}</button>
+    {% endfor %}
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="submitVote()" disabled>Submit Vote</button>
+  <div class="toast" id="toast"></div>
+
+  <hr class="divider" />
+
+  <div class="results-title">
+    Live Results
+    <button class="refresh-btn" onclick="loadResults()">↻ Refresh</button>
+  </div>
+  <div id="results">Loading...</div>
+</div>
+
+<script>
+  let selectedOption = null;
+
+  function selectOption(btn, option) {
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedOption = option;
+    document.getElementById('submitBtn').disabled = false;
+  }
+
+  async function submitVote() {
+    if (!selectedOption) return;
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    try {
+      const res = await fetch('/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ option: selectedOption })
+      });
+      const data = await res.json();
+      const toast = document.getElementById('toast');
+      if (res.ok) {
+        toast.className = 'toast success';
+        toast.textContent = '✅ ' + data.message;
+        selectedOption = null;
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        loadResults();
+      } else {
+        toast.className = 'toast error';
+        toast.textContent = '❌ ' + (data.error || 'Something went wrong');
+        btn.disabled = false;
+      }
+    } catch (e) {
+      document.getElementById('toast').className = 'toast error';
+      document.getElementById('toast').textContent = '❌ Network error';
+      btn.disabled = false;
+    }
+    btn.textContent = 'Submit Vote';
+  }
+
+  async function loadResults() {
+    try {
+      const res = await fetch('/results');
+      const data = await res.json();
+      const el = document.getElementById('results');
+      if (!data.results) { el.textContent = 'Could not load results.'; return; }
+      const total = data.total || 1;
+      el.innerHTML = Object.entries(data.results).map(([opt, count]) => {
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        return `<div class="bar-wrap">
+          <div class="bar-label"><span>${opt}</span><span>${count} votes (${pct}%)</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('results').textContent = 'Could not load results.';
+    }
+  }
+
+  loadResults();
+  setInterval(loadResults, 10000);
+</script>
+</body>
+</html>

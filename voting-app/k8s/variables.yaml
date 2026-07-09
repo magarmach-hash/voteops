@@ -1,0 +1,6 @@
+# Image configuration
+# The CI pipeline updates APP_TAG on every build.
+# ArgoCD picks up the value from deployment.yaml which is kept in sync.
+
+APP_IMAGE: goodboycroco/voting-app
+APP_TAG: latests
