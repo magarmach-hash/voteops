@@ -114,11 +114,7 @@
 
   <div class="options" id="options">
     {% for option in options %}
-<<<<<<< HEAD
-    <button class="option-btn" onclick="selectOption(this, '{{ option }}')">{{ bla }}</button>
-=======
     <button class="option-btn" onclick='selectOption(this, {{ option|tojson }})'>{{ option }}</button>
->>>>>>> 1aabfc1 (test3)
     {% endfor %}
   </div>
 
